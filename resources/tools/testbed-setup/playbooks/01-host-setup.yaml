@@ -35,6 +35,9 @@
     command: ln -s /dev/null /etc/udev/rules.d/80-net-setup-link.rules
   - name: update init for old interface naming
     command: update-initramfs -u
+    - name: install bridge-utils
+      apt: name=bridge-utils state=present
+
 - hosts: virl
   remote_user: testuser
   sudo: yes
