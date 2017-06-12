@@ -3,8 +3,11 @@
   remote_user: testuser
   become: yes
   tasks:
-    - name: Include variables
+    - name: Include hosts variables
       include_vars: 'vars/host_vars'
+
+    - name: Include virl variables
+      include_vars: 'vars/virl_vars'
 
     - name: install virl-bootstrap
       git:
@@ -119,4 +122,4 @@
     - command: crudini --set /etc/virl.ini DEFAULT neutron_bridge_flooding True
 
     - name: copy vinstall bootstrap wrapper script
-      template: src=files/virl/virl-bootstrap-wrapper dest=/home/virl/virl-bootstrap/virl-bootstrap-wrapper owner=virl group=virl mode=775
+      template: src=files/virl/virl-bootstrap-wrapper.j2 dest=/home/virl/virl-bootstrap/virl-bootstrap-wrapper owner=virl group=virl mode=775
