@@ -1,0 +1,5 @@
+---
+
+virl_salt_masters: 'virl-salt-master-1.cisco.com,virl-salt-master-2.cisco.com,virl-salt-master-3.cisco.com,virl-salt-master-4.cisco.com'
+virl_domain_name: 'cisco.com'
+virl_http_proxy: 'http://ntp.esl.cisco.com:80/'
