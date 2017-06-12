@@ -13,7 +13,7 @@ expect "Which step are you on"
 send "1\r"
 
 expect "Salt master"
-send "vsm-md.virl.info\r"
+send "{{ virl_salt_masters }}\r"
 
 expect "Which step are you on"
 send "2\r"
@@ -21,7 +21,7 @@ send "2\r"
 expect "Salt id"
 send "{{ hostname }}\r"
 expect "Salt domain name"
-send "linuxfoundation.org\r"
+send "{{ virl_domain_name }}\r"
 
 expect "Which step are you on"
 send "3\r"
@@ -29,10 +29,17 @@ send "3\r"
 expect "System hostname"
 send "{{ hostname }}\r"
 expect "System Domain name"
-send "linuxfoundation.org\r"
+send "{{ virl_domain_name }}\r"
 
 expect "Which step are you on"
 send "4\r"
+
+{% if virl_http_proxy != None or virl_http_proxy != '' %}
+puts "*******************STEP 5*************************************************************************************************************************************************"
+expect "Which step are you on"
+send "5\r"
+send "{{ virl_http_proxy }}"
+{% endif %}
 
 puts "*******************STEP 6*************************************************************************************************************************************************"
 expect "Which step are you on"
