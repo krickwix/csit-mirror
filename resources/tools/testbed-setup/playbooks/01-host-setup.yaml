@@ -3,71 +3,97 @@
   remote_user: testuser
   sudo: yes
   tasks:
-  - name: copy sudoers file
-    copy: src=files/sudoers dest=/etc/sudoers.d/testuser owner=root group=root mode=660
-  - name: copy hosts file
-    template: src=files/hosts dest=/etc/hosts owner=root group=root mode=644
-  - name: copy hostname file
-    template: src=files/hostname dest=/etc/hostname owner=root group=root mode=644
-  - name: interfaces file
-    template: src=files/interfaces dest=/etc/network/interfaces owner=root group=root mode=644
-  - name: copy grub file
-    template: src=files/grub dest=/etc/default/grub owner=root group=root mode=644
-  - name: update grub
-    command: update-grub
-  - name: copy apt sources file
-    template: src=files/apt-sources.list dest=/etc/apt/sources.list
-  - name: install python-apt
-    raw: apt-get update && apt-get install python-apt -y -q
-  - name: update repositories
-    apt: update_cache=yes
-  - name: install git
-    apt: name=git state=present
-  - name: install crudini
-    apt: name=crudini state=present
-  - name: install expect
-    apt: name=expect state=present
-  - name: install socat
-    apt: name=socat state=present
-  - name: install qemu
-    apt: name=qemu-system-x86 state=present
-  - name: Old interface naming
-    command: ln -s /dev/null /etc/udev/rules.d/80-net-setup-link.rules
-  - name: update init for old interface naming
-    command: update-initramfs -u
+    - name: Include variables
+      include_vars: 'vars/host_vars'
+
+    - name: copy sudoers file
+      copy: src=files/sudoers dest=/etc/sudoers.d/testuser owner=root group=root mode=660
+
+    - name: copy hosts file
+      template: src=files/hosts dest=/etc/hosts owner=root group=root mode=644
+
+    - name: copy hostname file
+      template: src=files/hostname dest=/etc/hostname owner=root group=root mode=644
+
+    - name: interfaces file
+      template: src=files/interfaces.j2 dest=/etc/network/interfaces owner=root group=root mode=644
+
+    - name: copy grub file
+      template: src=files/grub dest=/etc/default/grub owner=root group=root mode=644
+
+    - name: update grub
+      command: update-grub
+
+    - name: copy apt sources file
+      template: src=files/apt-sources.list dest=/etc/apt/sources.list
+
+    - name: install python-apt
+      raw: apt-get update && apt-get install python-apt -y -q
+
+    - name: update repositories
+      apt: update_cache=yes
+
+    - name: install git
+      apt: name=git state=present
+
+    - name: install crudini
+      apt: name=crudini state=present
+
+    - name: install expect
+      apt: name=expect state=present
+
+    - name: install socat
+      apt: name=socat state=present
+
+    - name: install qemu
+      apt: name=qemu-system-x86 state=present
+
     - name: install bridge-utils
       apt: name=bridge-utils state=present
+
+    - name: Old interface naming
+      command: ln -sf /dev/null /etc/udev/rules.d/80-net-setup-link.rules
+
+    - name: update init for old interface naming
+      command: update-initramfs -u
 
 - hosts: virl
   remote_user: testuser
   sudo: yes
   tasks:
-  - name: Add VIRL user
-    user: name=virl shell=/bin/bash comment="VIRL user" password="$6$mJPlK5FKLar6$xxXPP0LRhC7T1yhHtym18Z3nKZweTtfTxzi1WpvVHJ0U/Em1UWcHqfMhRApFp0rsY9jHRuL6FfeFbKPN..uDK."
-  - name: Add VIRL user to sudoers
-    copy: src=files/sudoers_virl dest=/etc/sudoers.d/virl owner=root group=root mode=660
-  - name: Set VIRL user authorized key
-    authorized_key: user=virl key="{{ lookup('file', '/home/testuser/.ssh/id_rsa.pub') }}"
-  - cron:
-    name: QEMU log garbage collector
-    minute: 0
-    hour: 0
-    job: "find /var/log/libvirt/qemu -type f -mtime +14 -name 'instance*.log' -delete"
-  - cron:
-    name: VPP deb package garbage collector
-    minute: 0
-    hour: 0
-    job: "find /tmp -type f -atime +14 -name '*.deb' -delete"
-  - cron:
-    name: VPP rpm package garbage collector
-    minute: 0
-    hour: 0
-    job: "find /tmp -type f -atime +14 -name '*.rpm' -delete"
-  - cron:
-    name: NFS scratch dir garbage collector
-    minute: 0
-    hour: 0
-    job: "find /nfs/scratch/ -type d -mtime +1 -name 'session-*' -exec rm -r "{}" \;"
+    - name: Add VIRL user
+      user: name=virl shell=/bin/bash comment="VIRL user" password="$6$mJPlK5FKLar6$xxXPP0LRhC7T1yhHtym18Z3nKZweTtfTxzi1WpvVHJ0U/Em1UWcHqfMhRApFp0rsY9jHRuL6FfeFbKPN..uDK."
+
+    - name: Add VIRL user to sudoers
+      copy: src=files/sudoers_virl dest=/etc/sudoers.d/virl owner=root group=root mode=660
+
+    - name: Set VIRL user authorized key
+      authorized_key: user=virl key="{{ lookup('file', '{{ ssh_pub_key_file }}') }}"
+
+    - cron:
+        name: QEMU log garbage collector
+        minute: "0"
+        hour: "0"
+        job: "find /var/log/libvirt/qemu -type f -mtime +14 -name 'instance*.log' -delete"
+
+    - cron:
+        name: VPP deb package garbage collector
+        minute: 0
+        hour: 0
+        job: "find /tmp -type f -atime +14 -name '*.deb' -delete"
+
+    - cron:
+        name: VPP rpm package garbage collector
+        minute: 0
+        hour: 0
+        job: "find /tmp -type f -atime +14 -name '*.rpm' -delete"
+
+    - cron:
+        name: NFS scratch dir garbage collector
+        minute: 0
+        hour: 0
+        job: 'find /nfs/scratch/ -type d -mtime +1 -name "session-*" -exec rm -r "{}" \;'
+
 - hosts: tg:sut
   remote_user: testuser
   sudo: yes
