@@ -1,0 +1,9 @@
+---
+
+ssh_pub_key_file: 'testuser.pub'
+domain_name: 'cisco.com'
+ntp_server: 'ntp.esl.cisco.com'
+first_nameserver: '144.254.71.184'
+second_nameserver: '173.38.200.100'
+salt_master: 'virl-salt-master-1.cisco.com,virl-salt-master-2.cisco.com,virl-salt-master-3.cisco.com,virl-salt-master-4.cisco.com'
+use_dhcp_on_public_port: 'True'
