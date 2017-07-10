@@ -141,7 +141,7 @@ Iq/9sUivYeSg6z3j1wP07aNCWiLdNFPPuG8EXzlBJwfIBM3Hs/an
 -----END RSA PRIVATE KEY-----
 EOF
 chmod 600 ${VIRL_PKEY}
-
+cat ${VIRL_PKEY}
 #
 # The server must be reachable and have a "status" file with
 # the content "PRODUCTION" to be selected.
