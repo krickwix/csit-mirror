@@ -268,7 +268,7 @@ for index in "${!VIRL_SERVER[@]}"; do
     # Start the simulation
     VIRL_SID[${index}]=$(ssh ${SSH_OPTIONS} \
         ${VIRL_USERNAME}@${VIRL_SERVER[${index}]} \
-        "start-testcase -vv --quota ${IP_QUOTA} --copy ${VIRL_TOPOLOGY} \
+        "start-testcase -vv -nip 172.16.1.254 --quota ${IP_QUOTA} --copy ${VIRL_TOPOLOGY} \
         --release ${VIRL_RELEASE} ${VPP_PKGS_FULL[@]}")
     retval=$?
     if [ ${retval} -ne "0" ]; then
