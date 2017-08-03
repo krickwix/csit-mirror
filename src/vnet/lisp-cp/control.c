@@ -2075,6 +2075,21 @@ vnet_lisp_add_del_map_resolver (vnet_lisp_add_del_map_resolver_args_t * a)
 }
 
 int
+vnet_lisp_map_register_set_ttl (u32 ttl)
+{
+  lisp_cp_main_t *lcm = vnet_lisp_cp_get_main ();
+  lcm->map_register_ttl = ttl;
+  return 0;
+}
+
+u32
+vnet_lisp_map_register_get_ttl (void)
+{
+  lisp_cp_main_t *lcm = vnet_lisp_cp_get_main ();
+  return lcm->map_register_ttl;
+}
+
+int
 vnet_lisp_add_del_mreq_itr_rlocs (vnet_lisp_add_del_mreq_itr_rloc_args_t * a)
 {
   lisp_cp_main_t *lcm = vnet_lisp_cp_get_main ();
@@ -2257,7 +2272,7 @@ build_map_request (lisp_cp_main_t * lcm, gid_address_t * deid,
 
   /* push outer ip header */
   pkt_push_udp_and_ip (vm, b, LISP_CONTROL_PORT, LISP_CONTROL_PORT, sloc,
-		       rloc);
+		       rloc, 1);
 
   bi_res[0] = bi;
 
@@ -2283,6 +2298,7 @@ build_encapsulated_map_request (lisp_cp_main_t * lcm,
     }
 
   b = vlib_get_buffer (vm, bi);
+  b->flags = 0;
 
   /* leave some space for the encap headers */
   vlib_buffer_make_headroom (b, MAX_LISP_MSG_ENCAP_LEN);
@@ -2311,7 +2327,7 @@ build_encapsulated_map_request (lisp_cp_main_t * lcm,
 
   /* push outer ip header */
   pkt_push_udp_and_ip (vm, b, LISP_CONTROL_PORT, LISP_CONTROL_PORT, sloc,
-		       mr_ip);
+		       mr_ip, 1);
 
   bi_res[0] = bi;
 
@@ -2466,7 +2482,7 @@ build_map_register (lisp_cp_main_t * lcm, ip_address_t * sloc,
 
   /* push outer ip header */
   pkt_push_udp_and_ip (vm, b, LISP_CONTROL_PORT, LISP_CONTROL_PORT, sloc,
-		       ms_ip);
+		       ms_ip, 1);
 
   bi_res[0] = bi;
   return b;
@@ -3650,7 +3666,7 @@ build_map_reply (lisp_cp_main_t * lcm, ip_address_t * sloc,
   lisp_msg_put_map_reply (b, records, nonce, probe_bit);
 
   /* push outer ip header */
-  pkt_push_udp_and_ip (vm, b, LISP_CONTROL_PORT, dst_port, sloc, dst);
+  pkt_push_udp_and_ip (vm, b, LISP_CONTROL_PORT, dst_port, sloc, dst, 1);
 
   bi_res[0] = bi;
   return b;
@@ -4004,6 +4020,7 @@ lisp_cp_init (vlib_main_t * vm)
   u64 now = clib_cpu_time_now ();
   timing_wheel_init (&lcm->wheel, now, vm->clib_time.clocks_per_second);
   lcm->nsh_map_index = ~0;
+  lcm->map_register_ttl = MAP_REGISTER_DEFAULT_TTL;
   return 0;
 }
 

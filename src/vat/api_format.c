@@ -1283,6 +1283,30 @@ vl_api_ip6_nd_event_t_handler_json (vl_api_ip6_nd_event_t * mp)
   /* JSON output not supported */
 }
 
+static void
+vl_api_l2_macs_event_t_handler (vl_api_l2_macs_event_t * mp)
+{
+  u32 n_macs = ntohl (mp->n_macs);
+  errmsg ("L2MAC event recived with pid %d cl-idx %d for %d macs: \n",
+	  ntohl (mp->pid), mp->client_index, n_macs);
+  int i;
+  for (i = 0; i < n_macs; i++)
+    {
+      vl_api_mac_entry_t *mac = &mp->mac[i];
+      errmsg (" [%d] sw_if_index %d  mac_addr %U  is_del %d \n",
+	      i + 1, ntohl (mac->sw_if_index),
+	      format_ethernet_address, mac->mac_addr, mac->is_del);
+      if (i == 1000)
+	break;
+    }
+}
+
+static void
+vl_api_l2_macs_event_t_handler_json (vl_api_l2_macs_event_t * mp)
+{
+  /* JSON output not supported */
+}
+
 #define vl_api_bridge_domain_details_t_endian vl_noop_handler
 #define vl_api_bridge_domain_details_t_print vl_noop_handler
 
@@ -3851,6 +3875,42 @@ static void
 }
 
 static void
+  vl_api_show_one_map_register_ttl_reply_t_handler
+  (vl_api_show_one_map_register_ttl_reply_t * mp)
+{
+  vat_main_t *vam = &vat_main;
+  i32 retval = ntohl (mp->retval);
+
+  vl_api_show_one_map_register_ttl_reply_t_endian (mp);
+
+  if (0 <= retval)
+    {
+      print (vam->ofp, "ttl: %u", mp->ttl);
+    }
+
+  vam->retval = retval;
+  vam->result_ready = 1;
+}
+
+static void
+  vl_api_show_one_map_register_ttl_reply_t_handler_json
+  (vl_api_show_one_map_register_ttl_reply_t * mp)
+{
+  vat_main_t *vam = &vat_main;
+  vat_json_node_t node;
+
+  vl_api_show_one_map_register_ttl_reply_t_endian (mp);
+  vat_json_init_object (&node);
+  vat_json_object_add_uint (&node, "ttl", mp->ttl);
+
+  vat_json_print (vam->ofp, &node);
+  vat_json_free (&node);
+
+  vam->retval = ntohl (mp->retval);
+  vam->result_ready = 1;
+}
+
+static void
 vl_api_show_one_pitr_reply_t_handler (vl_api_show_one_pitr_reply_t * mp)
 {
   vat_main_t *vam = &vat_main;
@@ -4561,6 +4621,7 @@ _(modify_vhost_user_if_reply)                           \
 _(delete_vhost_user_if_reply)                           \
 _(want_ip4_arp_events_reply)                            \
 _(want_ip6_nd_events_reply)                             \
+_(want_l2_macs_events_reply)                            \
 _(input_acl_set_interface_reply)                        \
 _(ipsec_spd_add_del_reply)                              \
 _(ipsec_interface_add_del_spd_reply)                    \
@@ -4601,6 +4662,7 @@ _(one_add_del_map_server_reply)                         \
 _(one_enable_disable_reply)                             \
 _(one_rloc_probe_enable_disable_reply)                  \
 _(one_map_register_enable_disable_reply)                \
+_(one_map_register_set_ttl_reply)                       \
 _(one_pitr_set_locator_set_reply)                       \
 _(one_map_request_mode_reply)                           \
 _(one_add_del_map_request_itr_rlocs_reply)              \
@@ -4776,6 +4838,8 @@ _(WANT_IP4_ARP_EVENTS_REPLY, want_ip4_arp_events_reply)			\
 _(IP4_ARP_EVENT, ip4_arp_event)                                         \
 _(WANT_IP6_ND_EVENTS_REPLY, want_ip6_nd_events_reply)			\
 _(IP6_ND_EVENT, ip6_nd_event)						\
+_(WANT_L2_MACS_EVENTS_REPLY, want_l2_macs_events_reply)			\
+_(L2_MACS_EVENT, l2_macs_event)						\
 _(INPUT_ACL_SET_INTERFACE_REPLY, input_acl_set_interface_reply)         \
 _(IP_ADDRESS_DETAILS, ip_address_details)                               \
 _(IP_DETAILS, ip_details)                                               \
@@ -4825,6 +4889,7 @@ _(ONE_ADD_DEL_MAP_SERVER_REPLY, one_add_del_map_server_reply)           \
 _(ONE_ENABLE_DISABLE_REPLY, one_enable_disable_reply)                   \
 _(ONE_MAP_REGISTER_ENABLE_DISABLE_REPLY,                                \
   one_map_register_enable_disable_reply)                                \
+_(ONE_MAP_REGISTER_SET_TTL_REPLY, one_map_register_set_ttl_reply)       \
 _(ONE_RLOC_PROBE_ENABLE_DISABLE_REPLY,                                  \
   one_rloc_probe_enable_disable_reply)                                  \
 _(ONE_PITR_SET_LOCATOR_SET_REPLY, one_pitr_set_locator_set_reply)       \
@@ -4871,6 +4936,7 @@ _(SHOW_ONE_MAP_REQUEST_MODE_REPLY, show_one_map_request_mode_reply)     \
 _(SHOW_ONE_RLOC_PROBE_STATE_REPLY, show_one_rloc_probe_state_reply)     \
 _(SHOW_ONE_MAP_REGISTER_STATE_REPLY,                                    \
   show_one_map_register_state_reply)                                    \
+_(SHOW_ONE_MAP_REGISTER_TTL_REPLY, show_one_map_register_ttl_reply)     \
 _(AF_PACKET_CREATE_REPLY, af_packet_create_reply)                       \
 _(AF_PACKET_DELETE_REPLY, af_packet_delete_reply)                       \
 _(POLICER_ADD_DEL_REPLY, policer_add_del_reply)                         \
@@ -6568,8 +6634,9 @@ api_l2_flags (vat_main_t * vam)
   unformat_input_t *i = vam->input;
   vl_api_l2_flags_t *mp;
   u32 sw_if_index;
-  u32 feature_bitmap = 0;
+  u32 flags = 0;
   u8 sw_if_index_set = 0;
+  u8 is_set = 0;
   int ret;
 
   /* Parse args required to build the message */
@@ -6589,13 +6656,19 @@ api_l2_flags (vat_main_t * vam)
 	    break;
 	}
       else if (unformat (i, "learn"))
-	feature_bitmap |= L2INPUT_FEAT_LEARN;
+	flags |= L2_LEARN;
       else if (unformat (i, "forward"))
-	feature_bitmap |= L2INPUT_FEAT_FWD;
+	flags |= L2_FWD;
       else if (unformat (i, "flood"))
-	feature_bitmap |= L2INPUT_FEAT_FLOOD;
+	flags |= L2_FLOOD;
       else if (unformat (i, "uu-flood"))
-	feature_bitmap |= L2INPUT_FEAT_UU_FLOOD;
+	flags |= L2_UU_FLOOD;
+      else if (unformat (i, "arp-term"))
+	flags |= L2_ARP_TERM;
+      else if (unformat (i, "off"))
+	is_set = 0;
+      else if (unformat (i, "disable"))
+	is_set = 0;
       else
 	break;
     }
@@ -6609,7 +6682,8 @@ api_l2_flags (vat_main_t * vam)
   M (L2_FLAGS, mp);
 
   mp->sw_if_index = ntohl (sw_if_index);
-  mp->feature_bitmap = ntohl (feature_bitmap);
+  mp->feature_bitmap = ntohl (flags);
+  mp->is_set = is_set;
 
   S (mp);
   W (ret);
@@ -12496,6 +12570,42 @@ api_want_ip6_nd_events (vat_main_t * vam)
 }
 
 static int
+api_want_l2_macs_events (vat_main_t * vam)
+{
+  unformat_input_t *line_input = vam->input;
+  vl_api_want_l2_macs_events_t *mp;
+  u8 enable_disable = 1;
+  u32 scan_delay = 0;
+  u32 max_macs_in_event = 0;
+  u32 learn_limit = 0;
+  int ret;
+
+  while (unformat_check_input (line_input) != UNFORMAT_END_OF_INPUT)
+    {
+      if (unformat (line_input, "learn-limit %d", &learn_limit))
+	;
+      else if (unformat (line_input, "scan-delay %d", &scan_delay))
+	;
+      else if (unformat (line_input, "max-entries %d", &max_macs_in_event))
+	;
+      else if (unformat (line_input, "disable"))
+	enable_disable = 0;
+      else
+	break;
+    }
+
+  M (WANT_L2_MACS_EVENTS, mp);
+  mp->enable_disable = enable_disable;
+  mp->pid = htonl (getpid ());
+  mp->learn_limit = htonl (learn_limit);
+  mp->scan_delay = (u8) scan_delay;
+  mp->max_macs_in_event = (u8) (max_macs_in_event / 10);
+  S (mp);
+  W (ret);
+  return ret;
+}
+
+static int
 api_input_acl_set_interface (vat_main_t * vam)
 {
   unformat_input_t *i = vam->input;
@@ -16051,6 +16161,60 @@ api_lisp_gpe_add_del_iface (vat_main_t * vam)
   return ret;
 }
 
+static int
+api_one_map_register_set_ttl (vat_main_t * vam)
+{
+  unformat_input_t *input = vam->input;
+  vl_api_one_map_register_set_ttl_t *mp;
+  u32 ttl = 0;
+  u8 is_set = 0;
+  int ret;
+
+  /* Parse args required to build the message */
+  while (unformat_check_input (input) != UNFORMAT_END_OF_INPUT)
+    {
+      if (unformat (input, "%u", &ttl))
+	is_set = 1;
+      else
+	{
+	  clib_warning ("parse error '%U'", format_unformat_error, input);
+	  return -99;
+	}
+    }
+
+  if (!is_set)
+    {
+      errmsg ("TTL value missing!");
+      return -99;
+    }
+
+  M (ONE_MAP_REGISTER_SET_TTL, mp);
+  mp->ttl = clib_host_to_net_u32 (ttl);
+
+  /* send it... */
+  S (mp);
+
+  /* Wait for a reply... */
+  W (ret);
+  return ret;
+}
+
+static int
+api_show_one_map_register_ttl (vat_main_t * vam)
+{
+  vl_api_show_one_map_register_ttl_t *mp;
+  int ret;
+
+  M (SHOW_ONE_MAP_REGISTER_TTL, mp);
+
+  /* send it... */
+  S (mp);
+
+  /* Wait for a reply... */
+  W (ret);
+  return ret;
+}
+
 /**
  * Add/del map request itr rlocs from ONE control plane and updates
  *
@@ -18207,11 +18371,22 @@ static void
 static int
 api_sw_interface_span_dump (vat_main_t * vam)
 {
+  unformat_input_t *input = vam->input;
   vl_api_sw_interface_span_dump_t *mp;
   vl_api_control_ping_t *mp_ping;
+  u8 is_l2 = 0;
   int ret;
 
+  while (unformat_check_input (input) != UNFORMAT_END_OF_INPUT)
+    {
+      if (unformat (input, "l2"))
+	is_l2 = 1;
+      else
+	break;
+    }
+
   M (SW_INTERFACE_SPAN_DUMP, mp);
+  mp->is_l2 = is_l2;
   S (mp);
 
   /* Use a control ping for synchronization */
@@ -19150,6 +19325,7 @@ api_p2p_ethernet_add (vat_main_t * vam)
   unformat_input_t *i = vam->input;
   vl_api_p2p_ethernet_add_t *mp;
   u32 parent_if_index = ~0;
+  u32 sub_id = ~0;
   u8 remote_mac[6];
   u8 mac_set = 0;
   int ret;
@@ -19165,6 +19341,8 @@ api_p2p_ethernet_add (vat_main_t * vam)
 	if (unformat
 	    (i, "remote_mac %U", unformat_ethernet_address, remote_mac))
 	mac_set++;
+      else if (unformat (i, "sub_id %d", &sub_id))
+	;
       else
 	{
 	  clib_warning ("parse error '%U'", format_unformat_error, i);
@@ -19182,9 +19360,15 @@ api_p2p_ethernet_add (vat_main_t * vam)
       errmsg ("missing remote mac address");
       return -99;
     }
+  if (sub_id == ~0)
+    {
+      errmsg ("missing sub-interface id");
+      return -99;
+    }
 
   M (P2P_ETHERNET_ADD, mp);
   mp->parent_if_index = ntohl (parent_if_index);
+  mp->subif_id = ntohl (sub_id);
   clib_memcpy (mp->remote_mac, remote_mac, sizeof (remote_mac));
 
   S (mp);
@@ -19718,7 +19902,7 @@ _(l2fib_add_del,                                                        \
 _(l2fib_flush_bd, "bd_id <bridge-domain-id>")                           \
 _(l2fib_flush_int, "<intfc> | sw_if_index <id>")                        \
 _(l2_flags,                                                             \
-  "sw_if <intfc> | sw_if_index <id> [learn] [forward] [uu-flood] [flood]\n") \
+  "sw_if <intfc> | sw_if_index <id> [learn] [forward] [uu-flood] [flood] [arp-term] [disable]\n") \
 _(bridge_flags,                                                         \
   "bd_id <bridge-domain-id> [learn] [forward] [uu-flood] [flood] [arp-term] [disable]\n") \
 _(tap_connect,                                                          \
@@ -19861,6 +20045,7 @@ _(input_acl_set_interface,                                              \
   "  [l2-table <nn>] [del]")                                            \
 _(want_ip4_arp_events, "address <ip4-address> [del]")                   \
 _(want_ip6_nd_events, "address <ip6-address> [del]")                    \
+_(want_l2_macs_events, "[disable] [learn-limit <n>] [scan-delay <n>] [max-entries <n>]") \
 _(ip_address_dump, "(ipv4 | ipv6) (<intfc> | sw_if_index <id>)")        \
 _(ip_dump, "ipv4 | ipv6")                                               \
 _(ipsec_spd_add_del, "spd_id <n> [del]")                                \
@@ -19964,10 +20149,12 @@ _(show_one_status, "")                                                  \
 _(one_stats_dump, "")                                                   \
 _(one_stats_flush, "")                                                  \
 _(one_get_map_request_itr_rlocs, "")                                    \
+_(one_map_register_set_ttl, "<ttl>")                                    \
 _(show_one_nsh_mapping, "")                                             \
 _(show_one_pitr, "")                                                    \
 _(show_one_use_petr, "")                                                \
 _(show_one_map_request_mode, "")                                        \
+_(show_one_map_register_ttl, "")                                        \
 _(lisp_add_del_locator_set, "locator-set <locator_name> [iface <intf> |"\
                             " sw_if_index <sw_if_index> p <priority> "  \
                             "w <weight>] [del]")                        \
@@ -20049,7 +20236,7 @@ _(ipfix_classify_stream_dump, "")                                       \
 _(ipfix_classify_table_add_del, "table <table-index> ip4|ip6 [tcp|udp]") \
 _(ipfix_classify_table_dump, "")                                        \
 _(sw_interface_span_enable_disable, "[l2] [src <intfc> | src_sw_if_index <id>] [disable | [[dst <intfc> | dst_sw_if_index <id>] [both|rx|tx]]]") \
-_(sw_interface_span_dump, "")                                           \
+_(sw_interface_span_dump, "[l2]")                                           \
 _(get_next_index, "node-name <node-name> next-node-name <node-name>")   \
 _(pg_create_interface, "if_id <nn>")                                    \
 _(pg_capture, "if_id <nnn> pcap <file_name> count <nnn> [disable]")     \
@@ -20083,11 +20270,10 @@ _(l2_xconnect_dump, "")                                             	\
 _(sw_interface_set_mtu, "<intfc> | sw_if_index <nn> mtu <nn>")        \
 _(ip_neighbor_dump, "[ip6] <intfc> | sw_if_index <nn>")                 \
 _(sw_interface_get_table, "<intfc> | sw_if_index <id> [ipv6]")          \
-_(p2p_ethernet_add, "<intfc> | sw_if_index <nn> remote_mac <mac-address>") \
+_(p2p_ethernet_add, "<intfc> | sw_if_index <nn> remote_mac <mac-address> sub_id <id>") \
 _(p2p_ethernet_del, "<intfc> | sw_if_index <nn> remote_mac <mac-address>") \
-_(lldp_config, "system-name <name> tx-hold <nn> tx-interval <nn>")      \
-_(sw_interface_set_lldp,                                                \
-  "<intfc> | sw_if_index <nn> [port-desc <description>] [disable]")
+_(lldp_config, "system-name <name> tx-hold <nn> tx-interval <nn>") \
+_(sw_interface_set_lldp, "<intfc> | sw_if_index <nn> [port-desc <description>] [disable]")
 
 /* List of command functions, CLI names map directly to functions */
 #define foreach_cli_function                                    \
@@ -20111,7 +20297,6 @@ _(search_node_table, "usage: search_node_table <name>...")	\
 _(set, "usage: set <variable-name> <value>")                    \
 _(script, "usage: script <file-name>")                          \
 _(unset, "usage: unset <variable-name>")
-
 #define _(N,n)                                  \
     static void vl_api_##n##_t_handler_uni      \
     (vl_api_##n##_t * mp)                       \
