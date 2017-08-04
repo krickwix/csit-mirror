@@ -35,7 +35,7 @@
     {
       "name": "{{user `release`}}-qemu",
       "type": "qemu",
-      "iso_url": "http://centos.chicago.waneq.com/7/isos/x86_64/CentOS-7-x86_64-Minimal-1611.iso",
+      "iso_url": "https://buildlogs.centos.org/rolling/7/isos/x86_64/CentOS-7-x86_64-Minimal-1611.iso",
       "iso_checksum": "71a7aa147877b413497cdff5b1e0aa5bc0c9484f",
       "iso_checksum_type": "sha1",
       "output_directory": "{{user `output_dir`}}",
